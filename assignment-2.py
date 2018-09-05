@@ -13,15 +13,16 @@ def read_file(file_name):
     
     return lines
 
-def search_keyword(lines, kw_include, kw_exclude = [], include_only_need_one = False):
+def search_keyword(lines, kw_include, kw_exclude = [],\
+             include_only_need_one = False, include_idx = False):
 
     count = 0
     found_lines = []
 
     if type(kw_include) is str: kw_include = [kw_include]
-    if type(kw_exclude) is str: kw_exclude = [kw_exclude]
+    if type(kw_exclude) is str: kw_exclude = [kw_exclude]   
         
-    for line in lines:
+    for idx, line in enumerate(lines):
         try:
             include_found = False
             for kw in kw_include:
@@ -41,7 +42,10 @@ def search_keyword(lines, kw_include, kw_exclude = [], include_only_need_one = F
             continue
 
         count += 1
-        found_lines.append(line)
+        if not include_idx:
+            found_lines.append(line)
+        else:
+            found_lines.append((line, idx))
 
     return (count, found_lines)
 
@@ -64,6 +68,8 @@ def extract_program_name(line, start_delimiter, end_delimiter):
     return name
 
 def output_a(lines_a, lines_b):
+    
+    print('Output A:')
 
     a, b = search_both_log(lines_a, lines_b, ' read(', ['tty', 'pipe'])
     print(a, b)
@@ -77,6 +83,8 @@ def output_a(lines_a, lines_b):
     print('\n')
 
 def output_b(lines_a, lines_b):
+
+    print('Output B:')
 
     a, b = search_both_log(lines_a, lines_b, ' execve(')
     print(a, b)
@@ -97,18 +105,87 @@ def output_b(lines_a, lines_b):
 
     print('\n')
 
+def get_program_stat(lines):
+
+    program_names = []
+    timestamps = []
+
+    line_num = 0
+    for line in lines:
+        if ' execve(' in line:
+            name = extract_program_name(line, '"', '"')
+            if name not in program_names:
+                program_names.append(name)
+                timestamps.append([line_num])
+            else:
+                idx = program_names.index(name)
+                timestamps[idx].append(line_num)
+
+        line_num += 1
+
+    return (program_names, timestamps)
+
+def print_program_stat(names, times):
+    for i in range(len(names)):
+        output = '%-20s' % str(names[i])
+        for t in times[i]:
+            output += ('\t' + str(t))
+        print(output)
+
+
 def output_c(lines_a, lines_b):
+
+    print('Output B:')
+
     a, ret_a = search_keyword(lines_a, ' execve(')
     print_lines(ret_a)
-    for line in ret_a:
-        name = extract_program_name(line, '"', '"')
-        print(name)
     
     print('\n')
-    
+
     b, ret_b = search_keyword(lines_b, ' execve(')
     print_lines(ret_b)
 
+    print('\n')
+
+    names_a, times_a = get_program_stat(lines_a)
+    names_b, times_b = get_program_stat(lines_b)
+
+    print_program_stat(names_a, times_a)
+    print('\n')
+    print_program_stat(names_b, times_b)
+    print('\n')
+
+    for i in range(len(names_a)):
+        name = names_a[i]
+        times = times_a[i]
+        output = name + '\t' + 'A: '
+        for t in times:
+            output += (str(t) + ',')
+        
+        output += '\t' + 'B: '
+        
+        if name in names_b:
+            idx = names_b.index(name)
+            times = times_b[idx]
+            for t in times:
+                output += (str(t) + ',')
+        else:
+            output += 'NA'
+            
+        print(output)
+
+    for i in range(len(names_b)):
+        name = names_b[i]
+        if name in names_a:
+            continue
+
+        times = times_b[i]
+
+        output = name + '\t' + 'A: NA' + '\t' + 'B: '
+        for t in times:
+            output += (str(t) + ',')
+            
+        print(output)
 
 def main():
     log_a_name = 'Log-A.strace'
