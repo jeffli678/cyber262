@@ -132,10 +132,9 @@ def print_program_stat(names, times):
             output += ('\t' + str(t))
         print(output)
 
-
 def output_c(lines_a, lines_b):
 
-    print('Output B:')
+    print('Output C:')
 
     a, ret_a = search_keyword(lines_a, ' execve(')
     print_lines(ret_a)
@@ -187,6 +186,24 @@ def output_c(lines_a, lines_b):
             
         print(output)
 
+    print('\n')
+
+def gen_key_seq(lines):
+
+    for line in lines:
+        if 'read' in line and 'tty' in line:
+            content = extract_program_name(line, '"', '"')
+            print('read: \t' + content)
+            # print(line)
+
+        if 'write' in line and 'tty' in line:
+            content = extract_program_name(line, '"', '"')
+            print('write: \t' + content)
+            # print(line)
+
+    print('\n')
+
+
 def main():
     log_a_name = 'Log-A.strace'
     lines_a = read_file(log_a_name)
@@ -197,6 +214,10 @@ def main():
     output_a(lines_a, lines_b)
     output_b(lines_a, lines_b)
     output_c(lines_a, lines_b)
+    print('Output D:')
+    gen_key_seq(lines_a)
+    print('Output E:')
+    gen_key_seq(lines_b)
 
 
 if __name__ == '__main__':
