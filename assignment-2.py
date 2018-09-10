@@ -93,7 +93,7 @@ def output_b(lines_a, lines_b):
     print(a, b)
 
     # treat stat as the same as fstat
-    a, b = search_both_log(lines_a, lines_b, [' access(', 'stat('], \
+    a, b = search_both_log(lines_a, lines_b, [' access(', ' stat('], \
                             include_only_need_one = True)
     print(a, b)
 
