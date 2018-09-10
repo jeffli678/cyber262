@@ -70,9 +70,9 @@ def extract_program_name(line, start_delimiter, end_delimiter):
 def output_a(lines):
     line_num = 1
 
-    stat_pid = -1
-    stat_line_num = -1
-    stat_line = ''
+    stat_pid = None
+    stat_line_num = None
+    stat_line = None
     
     for line in lines:
         if 'stat(' in line:
@@ -90,14 +90,64 @@ def output_a(lines):
                 print(str(stat_line_num) + '\t' + stat_line)
                 print(str(clone_line_num) + '\t' + clone_line)
                 
-                stat_pid = -1
-                stat_line_num = -1
-                stat_line = ''
+                stat_pid = None
+                stat_line_num = None
+                stat_line = None
 
         line_num += 1
 
+def pid_from_line(line):
+    # return line.split()[0]
+    idx = line.find(' ')
+    pid = line[0 : idx]
+    return pid
+
 def output_c(lines):
-    pass
+
+    line_num = 1
+
+    # correspond to open, getdents, close
+    kw_found = [False, False, False]
+    pids = [None, None, None]
+    line_nums = [None, None, None]
+    line_strs = [None, None, None]
+
+    for line in lines:
+        if 'open(' in line:
+            kw_found[0] = True
+            pids[0] = pid_from_line(line)
+            line_nums[0] = line_num
+            line_strs[0] = line
+        
+        elif 'getdents(' in line:
+            if kw_found[0]:
+                pid = pid_from_line(line)
+                if pid == pids[0]:
+                    kw_found[1] = True
+                    pids[1] = pid
+                    line_nums[1] = line_num
+                    line_strs[1] = line
+        
+        elif 'close(' in line:
+            if kw_found[0] and kw_found[1]:
+                pid = pid_from_line(line)
+                if pid == pids[0] and pid == pids[1]:
+                    kw_found[2] = True
+                    pids[2] = pid
+                    line_nums[2] = line_num
+                    line_strs[2] = line
+
+        if kw_found[0] and kw_found[1] and kw_found[2]:
+            
+            for i in [0, 1, 2]:
+                print(str(line_nums[i]) + '\t' + line_strs[i])
+
+            kw_found = [False, False, False]
+            pids = [None, None, None]
+            line_nums = [None, None, None]
+            line_strs = [None, None, None]
+
+        line_num += 1
 
 def main():
     log_a_name = 'Log-A.strace'
@@ -119,3 +169,28 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# output a
+# 126     16931 stat("/var/mail/user", 0x7fffffffda90) = -1 ENOENT (No such file or directory)
+# 180     16931 clone( <unfinished ...>
+# 808     16931 stat("/bin/uname", {st_mode=S_IFREG|0755, st_size=31440, ...}) = 0
+# 816     16931 clone( <unfinished ...>
+# output b
+# 36      16931 stat("./count_keystrokes.c", {st_mode=S_IFREG|0775, st_size=280, ...}) = 0
+# 62      16931 clone( <unfinished ...>
+# 317     16955 stat("/bin/cat", {st_mode=S_IFREG|0755, st_size=52080, ...}) = 0
+# 324     16955 clone( <unfinished ...>
+# 500     16956 stat("/bin/ls", {st_mode=S_IFREG|0755, st_size=126584, ...}) = 0
+# 501     16956 clone( <unfinished ...>
+# 611     16956 stat("/bin/rm", {st_mode=S_IFREG|0755, st_size=60272, ...}) = 0612     16956 clone( <unfinished ...>output c4       16931 open("/home/user/test/", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3</home/user/test>42      16931 getdents(3</home/user/test>, /* 0 entries */, 32768) = 0
+# 44      16931 close(3</home/user/test>)         = 0
+# 583     16959 open(".", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3</home/user/test>
+# 586     16959 getdents(3</home/user/test>, /* 0 entries */, 32768) = 0
+# 587     16959 close(3</home/user/test>)         = 0
+# 745     16961 open(".", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3</home/user/test>
+# 748     16961 getdents(3</home/user/test>, /* 0 entries */, 32768) = 0
+# 749     16961 close(3</home/user/test>)         = 0
+# 899     16963 open(".", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 3</home/user/test>
+# 902     16963 getdents(3</home/user/test>, /* 0 entries */, 32768) = 0
+# 903     16963 close(3</home/user/test>)         = 0
