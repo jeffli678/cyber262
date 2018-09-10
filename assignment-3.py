@@ -83,7 +83,7 @@ def output_a(lines):
 
         elif 'clone(' in line:
             clone_line_num = line_num
-            clone_pid = line.split()[0]
+            clone_pid = pid_from_line(line)
             clone_line = line
 
             if clone_pid == stat_pid:
